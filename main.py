@@ -2,9 +2,12 @@
 import spacy
 import re
 from spacy import displacy
+from string import digits
+
 
 coreference_words = ["they", "them", "their", "it", "its", "she", "he", "her", "hers", "his", "herself",
                      "himself"]
+number_values = ["million", "billion", "thousand", "hundred", "hundreds", "millions", "thousands", "billions"]
 
 immediate_coreference_words = ["who", "that"]
 
@@ -21,8 +24,8 @@ s = (u"When it comes to entertainment programming, they spend less than a third 
           u" a series of comical advertisements for Apple Inc.‚Äôs Beats earphones that play on her fast rise and "
           u"obsessive fans. Online, her Beats ads have four times the rate of clicks for those starring other "
           u"celebrities, including quarterback Tom Brady, Apple says.")
-s = s.replace(',', '')
 
+s = s.replace(".", "")
 doc = nlp(s)
 
 span = doc[doc[4].left_edge.i : doc[4].right_edge.i+1]
@@ -136,9 +139,10 @@ for token in doc:
 
     '''print(token.text, token.dep_, token.head.text, token.head.pos_,
           [child for child in token.children])'''
-for link in entity_links:
+'''take data, capture linking from following links, map in a json'''
+'''for link in entity_links:
     print(link)
-    print("\n")
+    print("\n")'''
 
 coref_phrases = []
 for sentence in sentences:
@@ -154,7 +158,11 @@ prev_prev_token = ""
 prev_prev_token_dep_ = ""
 
 coref_resolution = []
-for token in doc:
+
+coref_s = re.sub(r'[^\w\s]','',s)
+coref_doc = nlp(re.sub(r'[^\w\s]','', coref_s))
+
+for token in coref_doc:
     for head in immediate_coreference_words:
         if re.match(head, token.text):
             if str(prev_token_dep_) == "nsubj" or str(prev_token_dep_) == "conj" or str(prev_token_dep_) == "dobj" or \
@@ -168,11 +176,10 @@ for token in doc:
 prev_sentence = ""
 replace_sentence = False
 
-for coref_value in coref_resolution:
+for coref_value in coref_resolution[:]:
     for sentence in sentences:
         if sentence[0] == coref_value[0]:
-            sentence[0] = coref_value[1]
-            coref_resolution.remove(coref_value)
+            sentence[0] = coref_value[len(coref_value) - 1]
             break
 
 for sentence in sentences:
@@ -187,6 +194,88 @@ for sentence in sentences:
     prev_sentence = sentence[2]
     replace_sentence_value = sentence[0]
 
+
+conj_phrases = []
+collection_nouns = []
+prev_token = ""
+prev_token_pos_ = ""
+prev_prev_token = ""
+prev_prev_token_pos_ = ""
+
+
+for token in doc:
+
+    if str(token.pos_) == "NOUN" or str(token.pos_) == "PROPN" or str(token.pos_) == "ADP":
+        collection_nouns.append([token.text, token.pos_])
+
+    if (prev_token == "and" or prev_token == "with") and (prev_prev_token_pos_ == "NOUN" or prev_prev_token_pos_ == "ADP" or prev_prev_token_pos_ == "PROPN"):
+        conj_phrases.append(collection_nouns)
+
+    if str(token.pos_) == "VERB":
+        collection_nouns = []
+
+    prev_prev_token = prev_token
+    prev_prev_token_pos_ = prev_token_pos_
+    prev_token = token.text
+    prev_token_pos_ = token.pos_
+
+prev_prev_phrase_pos_ = ""
+prev_phrase = ""
+prev_phrase_pos_ = ""
+new_vec = []
+conj_vec = []
+noun_chunk = []
+
+for value in conj_phrases:
+    for phrase in value:
+        if str(phrase[1]) == "NOUN" or str(phrase[1]) == "PROPN":
+            noun_chunk.append(str(phrase[0]))
+
+        if str(phrase[1]) != "NOUN" and str(phrase[1]) != "PROPN" and \
+            (prev_phrase_pos_ == "NOUN" or prev_phrase_pos_ == "PROPN"):
+            if len(noun_chunk) > 0:
+                new_vec.append(noun_chunk)
+                noun_chunk = []
+
+        prev_prev_phrase_pos_ = prev_phrase_pos_
+        prev_prev_phrase = prev_phrase
+        prev_phrase = phrase[0]
+        prev_phrase_pos_ = phrase[1]
+
+    if len(noun_chunk) > 0:
+        new_vec.append(noun_chunk)
+    noun_chunk = []
+    conj_vec.append(new_vec)
+    new_vec = []
+
+joined_phrase = ""
+sentence_pairing = []
+found = False
+for phrase in conj_vec:
+    for value in phrase:
+        for sentence in sentences:
+            for word in sentence:
+                sentence_words = word.split()
+                result_words = [list_word for list_word in sentence_words if list_word.lower() not in
+                                coreference_words and list_word.lower() not in number_values]
+                word = ' '.join(result_words)
+                if len(value) > 0:
+                    if len(value) >= 1:
+                        joined_phrase = ' '.join(map(str, value))
+                    word = filter(lambda x: x.isalpha() or x.isspace(), word)
+                    word = word.lstrip()
+                    if word != sentence[1] and (word in joined_phrase):
+                        sentence_pairing.append(sentence + phrase)
+                        break
+
+print "\n"
+print "Identified relations: "
+for pair in sentence_pairing:
+    print pair
+
+print "\n"
+print "Identified links: "
 for sentence in sentences:
-    print (sentence)
+    print sentence
+
 
