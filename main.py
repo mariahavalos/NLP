@@ -1,8 +1,7 @@
 # -*- coding: utf-8 -*-
 import spacy
 import re
-from spacy import displacy
-from string import digits
+import json
 
 
 coreference_words = ["they", "them", "their", "it", "its", "she", "he", "her", "hers", "his", "herself",
@@ -248,11 +247,15 @@ for value in conj_phrases:
     conj_vec.append(new_vec)
     new_vec = []
 
+json_objects = {}
+entity_links = {}
+
 joined_phrase = ""
 sentence_pairing = []
 found = False
 for phrase in conj_vec:
     for value in phrase:
+        found = False
         for sentence in sentences:
             for word in sentence:
                 sentence_words = word.split()
@@ -265,17 +268,96 @@ for phrase in conj_vec:
                     word = filter(lambda x: x.isalpha() or x.isspace(), word)
                     word = word.lstrip()
                     if word != sentence[1] and (word in joined_phrase):
+                        if word in json_objects.keys():
+                            json_objects[word].append([phrase])
+                        else:
+                            json_objects[word] = [phrase]
+                        found = True
                         sentence_pairing.append(sentence + phrase)
                         break
+            if found:
+                break
 
 print "\n"
-print "Identified relations: "
-for pair in sentence_pairing:
-    print pair
+#print "Identified relations: "
+#for pair in sentence_pairing:
+    #print pair
 
-print "\n"
-print "Identified links: "
 for sentence in sentences:
-    print sentence
+    if sentence[0] in json_objects.keys():
+        json_objects[sentence[0]].append([{'verb': sentence[1]}, {'entity': sentence[2]}])
+    else:
+        json_objects[sentence[0]] = [{'verb': sentence[1]}, {'entity': sentence[2]}]
+
+temp_container = []
+temp_dict = {}
+second_dict = {}
+prev_word = ""
+prev_dict_key = ""
+prev_words = []
+for pair in sentence_pairing:
+    for key, value in json_objects.items():
+        prev_dict_key = key
+        if key == pair[0]:
+            for word in pair:
+                if isinstance(word, list):
+                    for instance in word:
+                        prev_words.append(instance)
+                    second_dict[prev_dict_key] = prev_words
+
+                if not isinstance(word, list):
+                    second_dict[prev_dict_key] = word
+
+                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "":
+                    json_objects[key].append(second_dict)
+                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "":
+                    json_objects[key].append(second_dict)
+
+                if isinstance(word, list):
+                    prev_dict_key = word[len(word) - 1]
+                else:
+                    prev_dict_key = word
+
+                second_dict = {}
+                prev_words = []
+        temp_dict = {}
 
 
+for pair in sentence_pairing:
+    for key, value in json_objects.items():
+        prev_dict_key = key
+        pair_stripped = pair[2].split()
+        result_words = [list_word for list_word in pair_stripped if list_word.lower() not in
+                                coreference_words and list_word.lower() not in number_values]
+        pair_stripped = ' '.join(result_words)
+        pair_stripped = filter(lambda x: not x.isdigit() or x.isspace(), pair_stripped)
+        pair_stripped = pair_stripped.lstrip()
+
+        if key == pair_stripped:
+            for word in pair:
+                if isinstance(word, list):
+                    for instance in word:
+                        prev_words.append(instance)
+                    second_dict[prev_dict_key] = prev_words
+
+                if not isinstance(word, list):
+                    second_dict[prev_dict_key] = word
+
+                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "":
+                    if key not in json_objects:
+                        json_objects[key].append(second_dict)
+                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "":
+                    if key not in json_objects:
+                        json_objects[key].append(second_dict)
+
+                if isinstance(word, list):
+                    prev_dict_key = word[len(word) - 1]
+                else:
+                    prev_dict_key = word
+
+                second_dict = {}
+                prev_words = []
+        temp_dict = {}
+
+
+print (json.dumps(json_objects, indent=2))
