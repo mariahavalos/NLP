@@ -12,6 +12,10 @@ immediate_coreference_words = ["who", "that"]
 
 nlp = spacy.load('en_core_web_sm')
 
+final_json = {}
+node_number = 0
+prev_node_number = 0
+
 s = (u"When it comes to entertainment programming, they spend less than a third of their screen time on "
           u"traditional television, and the rest of their hours on a mix of Netflix, YouTube and other streaming "
           u"services, according to a survey by the media company Awesomeness. To reach them, creators compete with "
@@ -136,12 +140,6 @@ for token in doc:
 
     prev_token = token.text
 
-    '''print(token.text, token.dep_, token.head.text, token.head.pos_,
-          [child for child in token.children])'''
-'''take data, capture linking from following links, map in a json'''
-'''for link in entity_links:
-    print(link)
-    print("\n")'''
 
 coref_phrases = []
 for sentence in sentences:
@@ -278,16 +276,45 @@ for phrase in conj_vec:
             if found:
                 break
 
-print "\n"
-#print "Identified relations: "
-#for pair in sentence_pairing:
-    #print pair
+temp_node_number = 0
+temp_prev_node_number = 0
 
 for sentence in sentences:
-    if sentence[0] in json_objects.keys():
-        json_objects[sentence[0]].append([{'verb': sentence[1]}, {'entity': sentence[2]}])
-    else:
-        json_objects[sentence[0]] = [{'verb': sentence[1]}, {'entity': sentence[2]}]
+    node_number += 1
+    node_in_json = False
+    second_node_in_json = False
+
+    for key, value in final_json.items():
+        for k, v in final_json.items():
+            if sentence[0] in v['full_form']:
+                node_in_json = True
+                temp_node_number = key
+            if sentence[2] in v['full_form']:
+                temp_prev_node_number = key
+                second_node_in_json = True
+
+    if node_in_json and second_node_in_json:
+        final_json[temp_node_number]['attributes'].append(sentence[1])
+        final_json[temp_prev_node_number]['attributes'].append(sentence[1])
+        final_json[temp_prev_node_number]['relations'].append(temp_node_number)
+        final_json[temp_node_number]['relations'].append(temp_prev_node_number)
+
+    if node_in_json and not second_node_in_json:
+        final_json[temp_node_number]['attributes'].append(sentence[1])
+        final_json[temp_node_number]['relations'].append(prev_node_number)
+        final_json[prev_node_number] = {'full_form': sentence[2], 'attributes': [sentence[1]], 'relations': [node_number]}
+
+    if not node_in_json and second_node_in_json:
+        final_json[node_number] = {'full_form': sentence[0], 'attributes': [sentence[1]], 'relations': [temp_prev_node_number]}
+        final_json[temp_prev_node_number]['attributes'].append(sentence[1])
+        final_json[temp_prev_node_number]['relations'].append(node_number)
+
+    if not node_in_json and not second_node_in_json:
+        final_json[node_number] = {'full_form': sentence[0], 'attributes': [sentence[1]], 'relations': [prev_node_number]}
+        final_json[prev_node_number] = {'full_form': sentence[2], 'attributes': [sentence[1]], 'relations': [node_number]}
+        node_number += 1
+
+    prev_node_number = node_number
 
 temp_container = []
 temp_dict = {}
@@ -360,4 +387,5 @@ for pair in sentence_pairing:
         temp_dict = {}
 
 
-print (json.dumps(json_objects, indent=2))
+#print (json.dumps(json_objects, indent=2))
+print (json.dumps(final_json, indent=2))
