@@ -323,9 +323,9 @@ prev_word = ""
 prev_dict_key = ""
 prev_words = []
 for pair in sentence_pairing:
-    for key, value in json_objects.items():
-        prev_dict_key = key
-        if key == pair[0]:
+    for key, value in final_json.items():
+        prev_dict_key = value['full_form']
+        if value['full_form'] == pair[0]:
             for word in pair:
                 if isinstance(word, list):
                     for instance in word:
@@ -336,9 +336,9 @@ for pair in sentence_pairing:
                     second_dict[prev_dict_key] = word
 
                 if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "":
-                    json_objects[key].append(second_dict)
+                    final_json[key]['attributes'].append(second_dict)
                 if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "":
-                    json_objects[key].append(second_dict)
+                   final_json[key]['attributes'].append(second_dict)
 
                 if isinstance(word, list):
                     prev_dict_key = word[len(word) - 1]
@@ -351,8 +351,8 @@ for pair in sentence_pairing:
 
 
 for pair in sentence_pairing:
-    for key, value in json_objects.items():
-        prev_dict_key = key
+    for key, value in final_json.items():
+        prev_dict_key = value['full_form']
         pair_stripped = pair[2].split()
         result_words = [list_word for list_word in pair_stripped if list_word.lower() not in
                                 coreference_words and list_word.lower() not in number_values]
@@ -360,7 +360,7 @@ for pair in sentence_pairing:
         pair_stripped = filter(lambda x: not x.isdigit() or x.isspace(), pair_stripped)
         pair_stripped = pair_stripped.lstrip()
 
-        if key == pair_stripped:
+        if value['full_form'] == pair_stripped:
             for word in pair:
                 if isinstance(word, list):
                     for instance in word:
@@ -371,11 +371,11 @@ for pair in sentence_pairing:
                     second_dict[prev_dict_key] = word
 
                 if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "":
-                    if key not in json_objects:
-                        json_objects[key].append(second_dict)
+                    if key not in final_json[key]['attributes']:
+                        final_json[key]['attributes'].append(second_dict)
                 if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "":
-                    if key not in json_objects:
-                        json_objects[key].append(second_dict)
+                    if key not in final_json[key]['attributes']:
+                        final_json[key]['attributes'].append(second_dict)
 
                 if isinstance(word, list):
                     prev_dict_key = word[len(word) - 1]
