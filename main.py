@@ -245,7 +245,6 @@ for value in conj_phrases:
     conj_vec.append(new_vec)
     new_vec = []
 
-json_objects = {}
 entity_links = {}
 
 joined_phrase = ""
@@ -257,6 +256,7 @@ for phrase in conj_vec:
         for sentence in sentences:
             for word in sentence:
                 sentence_words = word.split()
+                original_word = word
                 result_words = [list_word for list_word in sentence_words if list_word.lower() not in
                                 coreference_words and list_word.lower() not in number_values]
                 word = ' '.join(result_words)
@@ -266,10 +266,20 @@ for phrase in conj_vec:
                     word = filter(lambda x: x.isalpha() or x.isspace(), word)
                     word = word.lstrip()
                     if word != sentence[1] and (word in joined_phrase):
-                        if word in json_objects.keys():
-                            json_objects[word].append([phrase])
+                        if final_json != {}:
+                            for key, val in final_json.items():
+                                if original_word in val['full_form']:
+                                    final_json[key]['relations'].append({'relation_term': {word: {'related_to': phrase}}})
+                                else:
+                                    final_json[node_number] = {'full_form': original_word, 'relations': [{'relation_term': {word: {'related_to': phrase}}}], 'node_link': [prev_node_number]}
+                                    prev_node_number = node_number
+                                    node_number += 1
+                                    break
                         else:
-                            json_objects[word] = [phrase]
+                            final_json[node_number] = {'full_form': original_word, 'relations': [{'relation_term': {word: {'related_to': phrase}}}], 'node_link': [prev_node_number]}
+                            prev_node_number = node_number
+                            node_number += 1
+
                         found = True
                         sentence_pairing.append(sentence + phrase)
                         break
@@ -285,13 +295,12 @@ for sentence in sentences:
     second_node_in_json = False
 
     for key, value in final_json.items():
-        for k, v in final_json.items():
-            if sentence[0] in v['full_form']:
-                node_in_json = True
-                temp_node_number = key
-            if sentence[2] in v['full_form']:
-                temp_prev_node_number = key
-                second_node_in_json = True
+        if sentence[0] in value['full_form']:
+            node_in_json = True
+            temp_node_number = key
+        if sentence[2] in value['full_form']:
+            temp_prev_node_number = key
+            second_node_in_json = True
 
     if node_in_json and second_node_in_json:
         final_json[temp_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[2]}}})
@@ -303,12 +312,14 @@ for sentence in sentences:
         final_json[temp_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[2]}}})
         final_json[temp_node_number]['node_link'].append(prev_node_number)
         final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
+        node_number += 1
 
     if not node_in_json and second_node_in_json:
         final_json[node_number] = {'full_form': sentence[0],
-            'relations': [{'relation_term': sentence[1]}], 'node_link': [temp_prev_node_number]}
+            'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[2]}}}], 'node_link': [temp_prev_node_number]}
+        node_number += 1
 
-        final_json[temp_prev_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[2]}}})
+        final_json[temp_prev_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[0]}}})
         final_json[temp_prev_node_number]['node_link'].append(node_number)
 
     if not node_in_json and not second_node_in_json:
@@ -324,11 +335,13 @@ second_dict = {}
 prev_word = ""
 prev_dict_key = ""
 prev_words = []
+temp_node_number = 0
+dict_in_json = False
 for pair in sentence_pairing:
     for key, value in final_json.items():
         prev_dict_key = value['full_form']
-        if value['full_form'] == pair[0]:
-            for word in pair:
+        for word in pair:
+            if value['full_form'] == word:
                 if isinstance(word, list):
                     for instance in word:
                         prev_words.append(instance)
@@ -337,10 +350,18 @@ for pair in sentence_pairing:
                 if not isinstance(word, list):
                     second_dict = {'relation_term': {prev_dict_key: {'related_to': word}}}
 
-                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "" and second_dict not in final_json[key]['relations']:
+                dict_in_json = False
+                for key, value in final_json.items():
+                    if second_dict in value['relations']:
+                        temp_node_number = key
+                        dict_in_json = True
+                        break
+
+                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "" and dict_in_json:
                     final_json[key]['relations'].append(second_dict)
-                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "" and second_dict not in final_json[key]['relations']:
-                   final_json[key]['relations'].append(second_dict)
+
+                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "" and dict_in_json:
+                    final_json[key]['relations'].append(second_dict)
 
                 if isinstance(word, list):
                     prev_dict_key = word[len(word) - 1]
@@ -389,5 +410,4 @@ for pair in sentence_pairing:
         temp_dict = {}
 
 
-#print (json.dumps(json_objects, indent=2))
 print (json.dumps(final_json, indent=2))

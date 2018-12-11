@@ -33,12 +33,12 @@
       </usages-collector>
       <usages-collector id="statistics.file.extensions.edit">
         <counts>
-          <entry key="py" value="26642" />
+          <entry key="py" value="27938" />
         </counts>
       </usages-collector>
       <usages-collector id="statistics.file.types.edit">
         <counts>
-          <entry key="Python" value="26642" />
+          <entry key="Python" value="27938" />
         </counts>
       </usages-collector>
     </session>
@@ -48,8 +48,8 @@
       <file pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/main.py">
           <provider selected="true" editor-type-id="text-editor">
-            <state relative-caret-position="102">
-              <caret line="310" column="120" selection-start-line="310" selection-start-column="120" selection-end-line="310" selection-end-column="120" />
+            <state relative-caret-position="134">
+              <caret line="341" column="18" selection-start-line="341" selection-start-column="18" selection-end-line="341" selection-end-column="18" />
               <folding>
                 <element signature="e#24#36#0" expanded="true" />
               </folding>
@@ -70,15 +70,30 @@
     <findStrings>
       <find>mix</find>
       <find>print</find>
-      <find>views</find>
       <find>number</find>
-      <find>json_objects</find>
       <find>sentence_pairing</find>
       <find>relations</find>
       <find>relation</find>
       <find>flocked</find>
       <find>second_dict</find>
       <find>giving</find>
+      <find>television</find>
+      <find>Youtube</find>
+      <find>ok</find>
+      <find>value</find>
+      <find>json_objects</find>
+      <find>node_number</find>
+      <find>hello</find>
+      <find>phrase</find>
+      <find>phras</find>
+      <find>hi</find>
+      <find>views</find>
+      <find>relation_term</find>
+      <find>beats</find>
+      <find>her beats</find>
+      <find>screen time</find>
+      <find>presents</find>
+      <find>present</find>
     </findStrings>
   </component>
   <component name="Git.Settings">
@@ -194,7 +209,7 @@
       <window_info id="Favorites" order="2" side_tool="true" />
       <window_info anchor="bottom" id="Message" order="0" />
       <window_info anchor="bottom" id="Find" order="1" />
-      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.6974416" />
+      <window_info active="true" anchor="bottom" id="Run" order="2" visible="true" weight="0.49054506" />
       <window_info anchor="bottom" id="Debug" order="3" weight="0.39933258" />
       <window_info anchor="bottom" id="Cvs" order="4" weight="0.25" />
       <window_info anchor="bottom" id="Inspection" order="5" weight="0.4" />
@@ -211,22 +226,11 @@
   <component name="VcsContentAnnotationSettings">
     <option name="myLimit" value="2678400000" />
   </component>
-  <component name="XDebuggerManager">
-    <breakpoint-manager>
-      <breakpoints>
-        <line-breakpoint enabled="true" suspend="THREAD" type="python-line">
-          <url>file://$PROJECT_DIR$/main.py</url>
-          <line>391</line>
-          <option name="timeStamp" value="1" />
-        </line-breakpoint>
-      </breakpoints>
-    </breakpoint-manager>
-  </component>
   <component name="editorHistoryManager">
     <entry file="file://$PROJECT_DIR$/main.py">
       <provider selected="true" editor-type-id="text-editor">
-        <state relative-caret-position="102">
-          <caret line="310" column="120" selection-start-line="310" selection-start-column="120" selection-end-line="310" selection-end-column="120" />
+        <state relative-caret-position="134">
+          <caret line="341" column="18" selection-start-line="341" selection-start-column="18" selection-end-line="341" selection-end-column="18" />
           <folding>
             <element signature="e#24#36#0" expanded="true" />
           </folding>
