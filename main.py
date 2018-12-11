@@ -294,21 +294,21 @@ for sentence in sentences:
                 second_node_in_json = True
 
     if node_in_json and second_node_in_json:
-        final_json[temp_node_number]['relations'].append({'relation_term': sentence[1]})
-        final_json[temp_prev_node_number]['relations'].append({'relation_term': sentence[1]})
+        final_json[temp_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[2]}}})
+        final_json[temp_prev_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[0]}}})
         final_json[temp_prev_node_number]['node_link'].append(temp_node_number)
         final_json[temp_node_number]['node_link'].append(temp_prev_node_number)
 
     if node_in_json and not second_node_in_json:
-        final_json[temp_node_number]['relations'].append({'relation_term': sentence[1]})
+        final_json[temp_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[2]}}})
         final_json[temp_node_number]['node_link'].append(prev_node_number)
-        final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [{'relation_term': sentence[1]}], 'node_link': [node_number]}
+        final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
 
     if not node_in_json and second_node_in_json:
         final_json[node_number] = {'full_form': sentence[0],
             'relations': [{'relation_term': sentence[1]}], 'node_link': [temp_prev_node_number]}
 
-        final_json[temp_prev_node_number]['relations'].append({'relation_term': sentence[1]})
+        final_json[temp_prev_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[2]}}})
         final_json[temp_prev_node_number]['node_link'].append(node_number)
 
     if not node_in_json and not second_node_in_json:
@@ -332,14 +332,14 @@ for pair in sentence_pairing:
                 if isinstance(word, list):
                     for instance in word:
                         prev_words.append(instance)
-                    second_dict = {'relation_term': [prev_dict_key, {'related_to': prev_words}]}
+                    second_dict = {'relation_term': {prev_dict_key: {'related_to': prev_words}}}
 
                 if not isinstance(word, list):
-                    second_dict = {'relation_term': [prev_dict_key, {'related_to': word}]}
+                    second_dict = {'relation_term': {prev_dict_key: {'related_to': word}}}
 
-                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "":
+                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "" and second_dict not in final_json[key]['relations']:
                     final_json[key]['relations'].append(second_dict)
-                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "":
+                if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "" and second_dict not in final_json[key]['relations']:
                    final_json[key]['relations'].append(second_dict)
 
                 if isinstance(word, list):
@@ -367,16 +367,16 @@ for pair in sentence_pairing:
                 if isinstance(word, list):
                     for instance in word:
                         prev_words.append(instance)
-                    second_dict = {'relation_term': [prev_dict_key, {'related_to': prev_words}]}
+                    second_dict = {'relation_term': {prev_dict_key: {'related_to': prev_words}}}
 
                 if not isinstance(word, list):
-                    second_dict = {'relation_term': [prev_dict_key, {'related_to': word}]}
+                    second_dict = {'relation_term': {prev_dict_key: {'related_to': word}}}
 
                 if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key != "":
-                    if key not in final_json[key]['relations']:
+                    if second_dict not in final_json[key]['relations']:
                         final_json[key]['relations'].append(second_dict)
                 if (len(prev_words) > 0 or not isinstance(word, list)) and prev_dict_key == "":
-                    if key not in final_json[key]['relations']:
+                    if second_dict not in final_json[key]['relations']:
                         final_json[key]['relations'].append(second_dict)
 
                 if isinstance(word, list):
