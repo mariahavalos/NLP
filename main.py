@@ -56,7 +56,7 @@ with open("/Users/mariahavalos/Desktop/Apple_data.csv", "r") as open_csv:
         interm_pair_prev_prev_head = ""
         sentences = []
 
-        for chunk in doc.noun_chunks:
+        for chunk in list(doc.noun_chunks):
             not_in_words = True
             not_verb_connected = True
             for word in coreference_words:
