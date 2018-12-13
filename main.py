@@ -2,8 +2,7 @@
 import spacy
 import re
 import json
-import functools
-
+import numpy as np
 
 coreference_words = ["they", "them", "their", "it", "its", "she", "he", "her", "hers", "his", "herself",
                      "himself"]
@@ -120,11 +119,8 @@ with open("/Users/mariahavalos/Desktop/single_sentence.csv", "r") as open_csv:
             if str(token.head.pos_) == "VERB":
                 if len(links) > 0:
                     if iteration == 1:
-                        for child in links[1]:
-                            if str(child) in entity_links:
-                                entity_links.append(links)
-                                break
-
+                        if (i for i, j in zip(links[1], entity_links) if i == j) > 0:
+                            entity_links.append(links)
                         iteration = 0
                 links = []
 
@@ -154,11 +150,10 @@ with open("/Users/mariahavalos/Desktop/single_sentence.csv", "r") as open_csv:
         coref_doc = nlp(re.sub(r'[^\w\s]','', coref_s))
 
         for token in coref_doc:
-            for head in immediate_coreference_words:
-                if re.match(head, token.text):
-                    if str(prev_token_dep_) == "nsubj" or str(prev_token_dep_) == "conj" or str(prev_token_dep_) == "dobj" or \
-                            str(prev_token_dep_) == "pobj":
-                        coref_resolution.append([str(token.text)] + [str(prev_token)])
+            if token.text in immediate_coreference_words:
+                if str(prev_token_dep_) == "nsubj" or str(prev_token_dep_) == "conj" or str(prev_token_dep_) == "dobj" or \
+                        str(prev_token_dep_) == "pobj":
+                    coref_resolution.append([str(token.text)] + [str(prev_token)])
             prev_prev_token = prev_token
             prev_prev_token_dep = prev_token_dep_
             prev_token = token.text
@@ -175,7 +170,6 @@ with open("/Users/mariahavalos/Desktop/single_sentence.csv", "r") as open_csv:
                     break
 
         for sentence in sentences:
-
             if prev_sentence == sentence[0]:
                 replace_sentence = True
 
