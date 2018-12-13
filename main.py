@@ -20,6 +20,144 @@ import csv
 
 # Takes a csv file and outputs an array containing its contents
 
+def create_sentences(doc):
+    interm_pair_prev_dep_ = ""
+    interm_pair_prev = ""
+    inter_pair_prev_prev_dep_ = ""
+    inter_pair_prev_prev = ""
+    interm_pair_prev_head = ""
+    interm_pair_prev_prev_head = ""
+    sentences = []
+
+    for chunk in doc.noun_chunks:
+        not_in_words = True
+        not_verb_connected = True
+        if len(filter(lambda noun: str(chunk) == noun, coreference_words)) > 0:
+            not_in_words = False
+        if not_in_words:
+            if len(filter(lambda verb: str(chunk.root.head.text) == verb, verbs)) > 0:
+                not_verb_connected = False
+            if not not_verb_connected:
+                interm_pair_prev_prev = interm_pair_prev
+                interm_pair_prev_prev_dep_ = interm_pair_prev_dep_
+                interm_pair_prev_prev_head = interm_pair_prev_head
+                interm_pair_prev = str(chunk)
+                interm_pair_prev_dep_ = str(chunk.root.dep_)
+                interm_pair_prev_head = str(chunk.root.head.text)
+
+                if str(chunk.root.dep_) == "nsubj":
+                    interm_pair_prev_dep_ = "nsubj"
+                if str(chunk.root.dep_) == "conj":
+                    interm_pair_prev_dep_ = "conj"
+                if str(chunk.root.dep_) == "dobj":
+                    interm_pair_prev_dep_ = "dobj"
+                    if interm_pair_prev_prev_dep_ == "nsubj":
+                        sentences.append([interm_pair_prev_prev] + [interm_pair_prev_head] + [interm_pair_prev])
+                if str(chunk.root.dep_) == "pobj" or str(chunk.root.dep_) == "dobj" or str(chunk.root.dep_) == "conj":
+                    if interm_pair_prev_prev_dep_ == "dobj":
+                        sentences.append([interm_pair_prev_prev] + [interm_pair_prev_head] + [interm_pair_prev])
+
+            if not_verb_connected:
+                if interm_pair_prev_dep_ == "dobj" and interm_pair_prev_prev_dep_ == "":
+                    sentences.append([interm_pair_prev_prev] + [interm_pair_prev_head] + [str(chunk)])
+
+                if interm_pair_prev_dep_ != "" and interm_pair_prev_dep_ != "dobj":
+                    sentences.append([interm_pair_prev] + [interm_pair_prev_head] + [str(chunk)])
+
+                interm_pair_prev_prev_dep_ = interm_pair_prev_dep_
+                iterm_pair_prev_prev = interm_pair_prev
+                interm_pair_prev = str(chunk)
+                interm_pair_prev_dep_ = ""
+
+    return sentences
+
+def create_entity_links(doc):
+    temp_links = []
+    prev_token = ""
+    prev_token_dep = ""
+    keep_going = False
+    links = []
+    iteration = 0
+    entity_links = []
+
+    for token in doc:
+        if str(token.dep_) == 'pobj' and not keep_going:
+            temp_links.append([str(prev_token)] + [str(token.text)])
+            keep_going = True
+
+        if keep_going and str(token.head.pos_) == 'PROPN' or str(token.head.pos_) == 'NOUN' and str(
+                token.head.pos_) != 'ADP':
+            temp_links.append([token.text])
+
+        if keep_going and str(token.head.pos_) == 'ADP':
+            for child in token.children:
+                links.append([str(token.text)])
+                links.append([str(child)])
+            iteration = 1
+
+        if str(token.head.pos_) == "VERB":
+            if len(links) > 0:
+                if iteration == 1:
+                    if (i for i, j in zip(links[1], entity_links) if i == j) > 0:
+                        entity_links.append(links)
+                    iteration = 0
+            links = []
+
+        if keep_going and not (
+                str(token.head.pos_) == 'PROPN' or str(token.head.pos_) == 'NOUN' and str(token.head.pos_) != 'ADP'):
+            entity_links.append(temp_links)
+            temp_links = []
+            keep_going = False
+
+        prev_token = token.text
+
+    return entity_links
+
+
+def coref_sentences(sentences, doc):
+    prev_token = ""
+    prev_token_dep_ = ""
+    prev_prev_token = ""
+    prev_prev_token_dep_ = ""
+
+    coref_resolution = []
+
+    coref_s = re.sub(r'[^\w\s]', '', s)
+    coref_doc = nlp(re.sub(r'[^\w\s]', '', coref_s))
+
+    for token in coref_doc:
+        if token.text in immediate_coreference_words:
+            if str(prev_token_dep_) == "nsubj" or str(prev_token_dep_) == "conj" or str(prev_token_dep_) == "dobj" or \
+                    str(prev_token_dep_) == "pobj":
+                coref_resolution.append([str(token.text)] + [str(prev_token)])
+        prev_prev_token = prev_token
+        prev_prev_token_dep = prev_token_dep_
+        prev_token = token.text
+        prev_token_dep_ = token.dep_
+
+    prev_sentence = ""
+    replace_sentence = False
+    replace_sentence_value = ""
+
+    for coref_value in coref_resolution[:]:
+        for sentence in sentences:
+            if sentence[0] == coref_value[0]:
+                sentence[0] = coref_value[len(coref_value) - 1]
+                break
+
+    for sentence in sentences:
+        if prev_sentence == sentence[0]:
+            replace_sentence = True
+
+        if replace_sentence:
+            sentence[0] = replace_sentence_value
+            replace_sentence = False
+
+        prev_sentence = sentence[2]
+        replace_sentence_value = sentence[0]
+    return sentences
+
+
 with open("/Users/mariahavalos/Desktop/single_sentence.csv", "r") as open_csv:
     content = open_csv.readlines()
 
@@ -45,93 +183,9 @@ with open("/Users/mariahavalos/Desktop/single_sentence.csv", "r") as open_csv:
             if token.pos_ == "VERB":
                 verbs.append(str(token.text))
 
-        interm_pair_prev_dep_ = ""
-        interm_pair_prev = ""
-        inter_pair_prev_prev_dep_ = ""
-        inter_pair_prev_prev = ""
-        interm_pair_prev_head = ""
-        interm_pair_prev_prev_head = ""
-        sentences = []
+        sentences = create_sentences(doc)
 
-        for chunk in doc.noun_chunks:
-            not_in_words = True
-            not_verb_connected = True
-            if len(filter(lambda noun: str(chunk) == noun, coreference_words)) > 0:
-                not_in_words = False
-            if not_in_words:
-                if len(filter(lambda verb: str(chunk.root.head.text) == verb, verbs)) > 0:
-                    not_verb_connected = False
-                if not not_verb_connected:
-                    interm_pair_prev_prev = interm_pair_prev
-                    interm_pair_prev_prev_dep_ = interm_pair_prev_dep_
-                    interm_pair_prev_prev_head = interm_pair_prev_head
-                    interm_pair_prev = str(chunk)
-                    interm_pair_prev_dep_ = str(chunk.root.dep_)
-                    interm_pair_prev_head = str(chunk.root.head.text)
-
-                    if str(chunk.root.dep_) == "nsubj":
-                        interm_pair_prev_dep_ = "nsubj"
-                    if str(chunk.root.dep_) == "conj":
-                        interm_pair_prev_dep_ = "conj"
-                    if str(chunk.root.dep_) == "dobj":
-                        interm_pair_prev_dep_ = "dobj"
-                        if interm_pair_prev_prev_dep_ == "nsubj":
-                            sentences.append([interm_pair_prev_prev] + [interm_pair_prev_head] + [interm_pair_prev])
-                    if str(chunk.root.dep_) == "pobj" or str(chunk.root.dep_) == "dobj" or str(chunk.root.dep_) == "conj":
-                        if interm_pair_prev_prev_dep_ == "dobj":
-                            sentences.append([interm_pair_prev_prev] + [interm_pair_prev_head] + [interm_pair_prev])
-
-                if not_verb_connected:
-                    if interm_pair_prev_dep_ == "dobj" and interm_pair_prev_prev_dep_ == "":
-                        sentences.append([interm_pair_prev_prev] + [interm_pair_prev_head] + [str(chunk)])
-
-                    if interm_pair_prev_dep_ != "" and interm_pair_prev_dep_ != "dobj":
-                        sentences.append([interm_pair_prev] + [interm_pair_prev_head] + [str(chunk)])
-
-
-                    interm_pair_prev_prev_dep_ = interm_pair_prev_dep_
-                    iterm_pair_prev_prev = interm_pair_prev
-                    interm_pair_prev = str(chunk)
-                    interm_pair_prev_dep_ = ""
-
-        entity_links = []
-        temp_links = []
-        prev_token = ""
-        prev_token_dep = ""
-        keep_going = False
-        links = []
-        iteration = 0
-
-        for token in doc:
-            if str(token.dep_) == 'pobj' and not keep_going:
-                temp_links.append([str(prev_token)] + [str(token.text)])
-                keep_going = True
-
-            if keep_going and str(token.head.pos_) == 'PROPN' or str(token.head.pos_) == 'NOUN' and str(token.head.pos_) != 'ADP':
-                temp_links.append([token.text])
-
-            if keep_going and str(token.head.pos_) == 'ADP':
-                for child in token.children:
-                    links.append([str(token.text)])
-                    links.append([str(child)])
-                iteration = 1
-
-            if str(token.head.pos_) == "VERB":
-                if len(links) > 0:
-                    if iteration == 1:
-                        if (i for i, j in zip(links[1], entity_links) if i == j) > 0:
-                            entity_links.append(links)
-                        iteration = 0
-                links = []
-
-
-            if keep_going and not (str(token.head.pos_) == 'PROPN' or str(token.head.pos_) == 'NOUN' and str(token.head.pos_) != 'ADP'):
-                entity_links.append(temp_links)
-                temp_links = []
-                keep_going = False
-
-            prev_token = token.text
-
+        entity_links = create_entity_links(doc)
 
         coref_phrases = []
         for sentence in sentences:
@@ -139,46 +193,7 @@ with open("/Users/mariahavalos/Desktop/single_sentence.csv", "r") as open_csv:
             phrase = set(coreference_words) & set(sentence)
             coref_phrases.append(phrase)
 
-        prev_token = ""
-        prev_token_dep_ = ""
-        prev_prev_token = ""
-        prev_prev_token_dep_ = ""
-
-        coref_resolution = []
-
-        coref_s = re.sub(r'[^\w\s]','',s)
-        coref_doc = nlp(re.sub(r'[^\w\s]','', coref_s))
-
-        for token in coref_doc:
-            if token.text in immediate_coreference_words:
-                if str(prev_token_dep_) == "nsubj" or str(prev_token_dep_) == "conj" or str(prev_token_dep_) == "dobj" or \
-                        str(prev_token_dep_) == "pobj":
-                    coref_resolution.append([str(token.text)] + [str(prev_token)])
-            prev_prev_token = prev_token
-            prev_prev_token_dep = prev_token_dep_
-            prev_token = token.text
-            prev_token_dep_ = token.dep_
-
-        prev_sentence = ""
-        replace_sentence = False
-        replace_sentence_value = ""
-
-        for coref_value in coref_resolution[:]:
-            for sentence in sentences:
-                if sentence[0] == coref_value[0]:
-                    sentence[0] = coref_value[len(coref_value) - 1]
-                    break
-
-        for sentence in sentences:
-            if prev_sentence == sentence[0]:
-                replace_sentence = True
-
-            if replace_sentence:
-                sentence[0] = replace_sentence_value
-                replace_sentence = False
-
-            prev_sentence = sentence[2]
-            replace_sentence_value = sentence[0]
+        sentences = coref_sentences(sentences, doc)
 
 
         conj_phrases = []
