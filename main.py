@@ -53,7 +53,7 @@ def create_sentences(doc, coreference_words, verbs):
 
     return sentences
 
-def create_entity_links(doc):
+'''def create_entity_links(doc):
     temp_links = []
     prev_token = ""
     keep_going = False
@@ -93,7 +93,7 @@ def create_entity_links(doc):
         prev_token = token.text
 
     return entity_links
-
+'''
 
 def coref_sentences(sentences, immediate_coreference_words, s):
     prev_token = ""
@@ -223,14 +223,8 @@ def create_second_layer_linking(final_json, sentence_pairing):
     return final_json
 
 def create_third_layer_linking(final_json, sentence_pairing, coreference_words, number_values):
-    temp_container = []
-    temp_dict = {}
     second_dict = {}
-    prev_word = ""
-    prev_dict_key = ""
     prev_words = []
-    temp_node_number = 0
-    dict_in_json = False
 
     for pair in sentence_pairing:
         for key, value in final_json.items():
@@ -389,8 +383,9 @@ def main():
             final_json = create_second_layer_linking(final_json, sentence_pairing)
             final_json = create_third_layer_linking(final_json, sentence_pairing, coreference_words, number_values)
 
-            with open('entity_relation_data.json', 'a') as outfile:
+            print (json.dumps(final_json, indent=2))
+            '''with open('entity_relation_data.json', 'a') as outfile:
                 outfile.write(json.dumps(final_json, indent=2))
-                outfile.close()
+                outfile.close()'''
 
 main()
