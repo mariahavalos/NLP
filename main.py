@@ -2,6 +2,7 @@
 import spacy
 import re
 import json
+import functools
 
 
 coreference_words = ["they", "them", "their", "it", "its", "she", "he", "her", "hers", "his", "herself",
@@ -20,7 +21,7 @@ import csv
 
 # Takes a csv file and outputs an array containing its contents
 
-with open("/Users/mariahavalos/Desktop/Apple_data.csv", "r") as open_csv:
+with open("/Users/mariahavalos/Desktop/single_sentence.csv", "r") as open_csv:
     content = open_csv.readlines()
 
 	# Load each line of csv contents into array, return array
@@ -30,9 +31,6 @@ with open("/Users/mariahavalos/Desktop/Apple_data.csv", "r") as open_csv:
         s = unicode(line,encoding="utf-8")
         s = s.replace(".", "")
         doc = nlp(s)
-
-        span = doc[doc[4].left_edge.i : doc[4].right_edge.i+1]
-        span.merge()
 
         noun_count = 0
         verb_count = 0
@@ -56,16 +54,14 @@ with open("/Users/mariahavalos/Desktop/Apple_data.csv", "r") as open_csv:
         interm_pair_prev_prev_head = ""
         sentences = []
 
-        for chunk in list(doc.noun_chunks):
+        for chunk in doc.noun_chunks:
             not_in_words = True
             not_verb_connected = True
-            for word in coreference_words:
-                if word == str(chunk):
-                    not_in_words = False
+            if len(filter(lambda noun: str(chunk) == noun, coreference_words)) > 0:
+                not_in_words = False
             if not_in_words:
-                for verb in verbs:
-                    if verb == str(chunk.root.head.text):
-                        not_verb_connected = False
+                if len(filter(lambda verb: str(chunk.root.head.text) == verb, verbs)) > 0:
+                    not_verb_connected = False
                 if not not_verb_connected:
                     interm_pair_prev_prev = interm_pair_prev
                     interm_pair_prev_prev_dep_ = interm_pair_prev_dep_
@@ -144,10 +140,8 @@ with open("/Users/mariahavalos/Desktop/Apple_data.csv", "r") as open_csv:
         coref_phrases = []
         for sentence in sentences:
             is_pronoun = False
-            for head in coreference_words:
-                for phrase in sentence:
-                    if re.match(head, phrase):
-                        coref_phrases.append(phrase)
+            phrase = set(coreference_words) & set(sentence)
+            coref_phrases.append(phrase)
 
         prev_token = ""
         prev_token_dep_ = ""
@@ -410,5 +404,7 @@ with open("/Users/mariahavalos/Desktop/Apple_data.csv", "r") as open_csv:
                         prev_words = []
                 temp_dict = {}
 
-
         print (json.dumps(final_json, indent=2))
+        '''with open('entity_relation_data.json', 'a') as outfile:
+            outfile.write(json.dumps(final_json, indent=2))
+            outfile.close()'''
