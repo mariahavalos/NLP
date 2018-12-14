@@ -2,6 +2,8 @@
 import spacy
 import re
 import json
+import HTMLParser
+
 
 nlp = spacy.load('en_core_web_sm')
 
@@ -141,7 +143,6 @@ def create_conj_phrases(doc):
     prev_prev_token_pos_ = ""
 
     for token in doc:
-
         if str(token.pos_) == "NOUN" or str(token.pos_) == "PROPN" or str(token.pos_) == "ADP":
             collection_nouns.append([token.text, token.pos_])
 
@@ -268,7 +269,6 @@ def main():
     number_values = ["million", "billion", "thousand", "hundred", "hundreds", "millions", "thousands", "billions"]
     immediate_coreference_words = ["who", "that"]
 
-    final_json = {}
     node_number = 0
     prev_node_number = 0
 
@@ -277,9 +277,10 @@ def main():
 
         # Load each line of csv contents into array, return array
         for line in content:
-
+            final_json = {}
             line = re.sub(r'[^\x00-\x7F]+',' ', line)
-            s = unicode(line,encoding="utf-8")
+            s = unicode(line, encoding="utf-8")
+            s = HTMLParser.HTMLParser().unescape(s)
             s = s.replace(".", "")
             doc = nlp(s)
             verbs = []
@@ -383,9 +384,8 @@ def main():
             final_json = create_second_layer_linking(final_json, sentence_pairing)
             final_json = create_third_layer_linking(final_json, sentence_pairing, coreference_words, number_values)
 
-            print (json.dumps(final_json, indent=2))
-            '''with open('entity_relation_data.json', 'a') as outfile:
+            with open('entity_relation_data.json', 'a') as outfile:
                 outfile.write(json.dumps(final_json, indent=2))
-                outfile.close()'''
+                outfile.close()
 
 main()
