@@ -304,9 +304,6 @@ def main():
                         if found:
                             break
 
-            temp_node_number = 0
-            temp_prev_node_number = 0
-
             for sentence in sentences:
                 node_number += 1
                 node_in_json = False
@@ -348,7 +345,7 @@ def main():
                         if sentence[0] in str(doc_sentence):
                             relation_sentences.append(str(doc_sentence))
 
-                    if len(relation_sentences) < 0:
+                    if len(relation_sentences) <= 0:
                         final_json[node_number] = {'full_form': sentence[0],
                             'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[2]}}}], 'node_link': [temp_prev_node_number]}
                     else:
