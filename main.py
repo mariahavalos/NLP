@@ -55,48 +55,6 @@ def create_sentences(doc, coreference_words, verbs):
 
     return sentences
 
-'''def create_entity_links(doc):
-    temp_links = []
-    prev_token = ""
-    keep_going = False
-    links = []
-    iteration = 0
-    entity_links = []
-
-    for token in doc:
-        if str(token.dep_) == 'pobj' and not keep_going:
-            temp_links.append([str(prev_token)] + [str(token.text)])
-            keep_going = True
-
-        if keep_going and str(token.head.pos_) == 'PROPN' or str(token.head.pos_) == 'NOUN' and str(
-                token.head.pos_) != 'ADP':
-            temp_links.append([token.text])
-
-        if keep_going and str(token.head.pos_) == 'ADP':
-            for child in token.children:
-                links.append([str(token.text)])
-                links.append([str(child)])
-            iteration = 1
-
-        if str(token.head.pos_) == "VERB":
-            if len(links) > 0:
-                if iteration == 1:
-                    if (i for i, j in zip(links[1], entity_links) if i == j) > 0:
-                        entity_links.append(links)
-                    iteration = 0
-            links = []
-
-        if keep_going and not (
-                str(token.head.pos_) == 'PROPN' or str(token.head.pos_) == 'NOUN' and str(token.head.pos_) != 'ADP'):
-            entity_links.append(temp_links)
-            temp_links = []
-            keep_going = False
-
-        prev_token = token.text
-
-    return entity_links
-'''
-
 def coref_sentences(sentences, immediate_coreference_words, s):
     prev_token = ""
     prev_token_dep_ = ""
@@ -153,10 +111,10 @@ def create_conj_phrases(doc):
         if str(token.pos_) == "VERB":
             collection_nouns = []
 
+
         prev_prev_token_pos_ = prev_token_pos_
         prev_token = token.text
         prev_token_pos_ = token.pos_
-
     return conj_phrases
 
 def add_noun_chunk_to_conj_phrases(conj_phrases):
@@ -236,7 +194,6 @@ def create_third_layer_linking(final_json, sentence_pairing, coreference_words, 
             pair_stripped = ' '.join(result_words)
             pair_stripped = filter(lambda x: not x.isdigit() or x.isspace(), pair_stripped)
             pair_stripped = pair_stripped.lstrip()
-
             if value['full_form'] == pair_stripped:
                 for word in pair:
                     if isinstance(word, list):
@@ -272,7 +229,7 @@ def main():
     node_number = 0
     prev_node_number = 0
 
-    with open("/Users/mariahavalos/Desktop/single_sentence.csv", "r") as open_csv:
+    with open("/Users/mariahavalos/Desktop/1data.csv", "r") as open_csv:
         content = open_csv.readlines()
 
         # Load each line of csv contents into array, return array
@@ -281,6 +238,12 @@ def main():
             line = re.sub(r'[^\x00-\x7F]+',' ', line)
             s = unicode(line, encoding="utf-8")
             s = HTMLParser.HTMLParser().unescape(s)
+
+            parsed_sentences = []
+            unparsed_sentences = nlp(s)
+            for sentence in unparsed_sentences.sents:
+                parsed_sentences.append(sentence)
+
             s = s.replace(".", "")
             doc = nlp(s)
             verbs = []
@@ -319,14 +282,17 @@ def main():
                                 word = word.lstrip()
                                 if word != sentence[1] and (word in joined_phrase):
                                     if final_json != {}:
+                                        found_key = False
                                         for key, val in final_json.items():
-                                            if original_word in val['full_form']:
+                                            if str(original_word) == str(val['full_form']):
                                                 final_json[key]['relations'].append({'relation_term': {word: {'related_to': phrase}}})
-                                            else:
-                                                final_json[node_number] = {'full_form': original_word, 'relations': [{'relation_term': {word: {'related_to': phrase}}}], 'node_link': [prev_node_number]}
-                                                prev_node_number = node_number
-                                                node_number += 1
-                                                break
+                                                found_key = True
+                                        if not found_key:
+                                            final_json[node_number] = {'full_form': original_word, 'relations': [
+                                                {'relation_term': {word: {'related_to': phrase}}}],
+                                                                       'node_link': [prev_node_number]}
+                                            prev_node_number = node_number
+                                            node_number += 1
                                     else:
                                         final_json[node_number] = {'full_form': original_word, 'relations': [{'relation_term': {word: {'related_to': phrase}}}], 'node_link': [prev_node_number]}
                                         prev_node_number = node_number
@@ -347,10 +313,10 @@ def main():
                 second_node_in_json = False
 
                 for key, value in final_json.items():
-                    if sentence[0] in value['full_form']:
+                    if str(sentence[0]) == str(value['full_form']):
                         node_in_json = True
                         temp_node_number = key
-                    if sentence[2] in value['full_form']:
+                    if str(sentence[2]) == str(value['full_form']):
                         temp_prev_node_number = key
                         second_node_in_json = True
 
@@ -363,20 +329,61 @@ def main():
                 if node_in_json and not second_node_in_json:
                     final_json[temp_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[2]}}})
                     final_json[temp_node_number]['node_link'].append(prev_node_number)
-                    final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
+
+                    relation_sentences = []
+                    for doc_sentence in parsed_sentences:
+                        if sentence[2] in str(doc_sentence):
+                            relation_sentences.append(str(doc_sentence))
+
+                    if len(relation_sentences) > 0:
+                        final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [
+                            {'related_sentence': relation_sentences, 'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
+                    else:
+                        final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
                     node_number += 1
 
                 if not node_in_json and second_node_in_json:
-                    final_json[node_number] = {'full_form': sentence[0],
-                        'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[2]}}}], 'node_link': [temp_prev_node_number]}
+                    relation_sentences = []
+                    for doc_sentence in parsed_sentences:
+                        if sentence[0] in str(doc_sentence):
+                            relation_sentences.append(str(doc_sentence))
+
+                    if len(relation_sentences) < 0:
+                        final_json[node_number] = {'full_form': sentence[0],
+                            'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[2]}}}], 'node_link': [temp_prev_node_number]}
+                    else:
+                        final_json[node_number] = { 'full_form': sentence[0],
+                            'relations': [{'related_sentence': relation_sentences, 'relation_term': { sentence[1]: {'related_to': sentence[2]}}}], 'node_link': [temp_prev_node_number]}
+
                     node_number += 1
 
                     final_json[temp_prev_node_number]['relations'].append({'relation_term': {sentence[1]: {'related_to': sentence[0]}}})
                     final_json[temp_prev_node_number]['node_link'].append(node_number)
 
                 if not node_in_json and not second_node_in_json:
-                    final_json[node_number] = {'full_form': sentence[0], 'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[2]}}}], 'node_link': [prev_node_number]}
-                    final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
+                    relation_sentences_0 = []
+                    relation_sentences_2 = []
+                    for doc_sentence in parsed_sentences:
+                        if sentence[0] in str(doc_sentence):
+                            relation_sentences_0.append(str(doc_sentence))
+                        if sentence[2] in str(doc_sentence):
+                            relation_sentences_2.append(str(doc_sentence))
+
+                    if len(relation_sentences_0) > 0:
+                        final_json[prev_node_number] = {'full_form': sentence[0], 'relations': [
+                            {'related_sentence': relation_sentences_0, 'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
+
+                    if len(relation_sentences_2) > 0:
+                        final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [
+                            {'related_sentence': relation_sentences_2,
+                             'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
+
+                    if len(relation_sentences_0) < 0:
+                        final_json[node_number] = {'full_form': sentence[0], 'relations': [{'relation_term': {sentence[1]: {'related_to': sentence[2]}}}], 'node_link': [prev_node_number]}
+
+                    if len(relation_sentences_2) < 0:
+                        final_json[prev_node_number] = {'full_form': sentence[2], 'relations': [
+                            {'relation_term': {sentence[1]: {'related_to': sentence[0]}}}], 'node_link': [node_number]}
                     node_number += 1
 
                 prev_node_number = node_number
